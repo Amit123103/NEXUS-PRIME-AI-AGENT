@@ -165,7 +165,7 @@ document.addEventListener('DOMContentLoaded', () => {
       try {
         const originalText = btn.innerHTML;
         btn.innerHTML = '<span>Entering NEXUS...</span>';
-        const res = await fetch('http://localhost:3005/api/auth/guest', { method: 'POST' });
+        const res = await fetch('/api/auth/guest', { method: 'POST' });
         if (res.ok) {
           const data = await res.json();
           localStorage.setItem('nexus_token', data.accessToken);

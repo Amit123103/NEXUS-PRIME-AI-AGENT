@@ -4,7 +4,7 @@
 // ═══════════════════════════════════════════════
 
 document.addEventListener('DOMContentLoaded', () => {
-  const API = 'http://localhost:3005';
+  const API = '';
   let currentChatId = null;
   let currentUser = null;
   let uploadedFile = null;
