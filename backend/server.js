@@ -44,6 +44,9 @@ const authLimiter = rateLimit({
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
 
+// Initialize Database (Mongoose handles buffering internally)
+connectDB();
+
 // Body parsers
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
@@ -51,7 +54,7 @@ app.use(express.urlencoded({ extended: true }));
 // Favicon handler (prevents 404)
 app.get('/favicon.ico', (req, res) => res.status(204).end());
 
-// Serve static files
+// Serve static files (Frontend)
 app.use(express.static(path.join(__dirname, '..', 'frontend')));
 app.use('/uploads', express.static(uploadsDir));
 
@@ -63,27 +66,15 @@ app.use('/api/image', require('./routes/image'));
 app.use('/api/video', require('./routes/video'));
 app.use('/api/protein', proteinRoutes);
 app.use('/api/research', researchRoutes);
-
-// Health Check
 app.use('/api/asr', require('./routes/asr'));
 
-// Page routes
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'frontend', 'index.html'));
-});
-
-app.get('/auth', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'frontend', 'auth.html'));
-});
-
-app.get('/agent', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'frontend', 'agent.html'));
-});
+// Page routes (Client-side routing support)
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, '..', 'frontend', 'index.html')));
+app.get('/auth', (req, res) => res.sendFile(path.join(__dirname, '..', 'frontend', 'auth.html')));
+app.get('/agent', (req, res) => res.sendFile(path.join(__dirname, '..', 'frontend', 'agent.html')));
 
 // 404 handler
-app.use((req, res) => {
-  res.status(404).json({ message: 'Route not found' });
-});
+app.use((req, res) => res.status(404).json({ message: 'Route not found' }));
 
 // Error handler
 app.use((err, req, res, next) => {
@@ -91,26 +82,18 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: 'Internal server error' });
 });
 
-// Start server
+// Start server for Local Development
 const PORT = process.env.PORT || 3005;
-
-const startServer = async () => {
-  await connectDB();
+if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
   app.listen(PORT, () => {
     console.log(`
 ╔══════════════════════════════════════════════╗
 ║         ⚡ NEXUS PRIME OMEGA-3.0 ⚡          ║
 ║         Server running on port ${PORT}          ║
 ║         http://localhost:${PORT}               ║
-╚══════════════════════════════════════════════╝
-    `);
+╚══════════════════════════════════════════════╝`);
   });
-};
-
-// Start server only if not in Vercel environment
-if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
-  startServer();
 }
 
-// Export for Vercel
+// Export for Vercel Serverless
 module.exports = app;
