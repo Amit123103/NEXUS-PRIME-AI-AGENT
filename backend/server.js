@@ -11,6 +11,10 @@ const connectDB = require('./config/db');
 
 const app = express();
 
+// Basic Health Check (Helps Render avoid 502/503 during boot)
+app.get('/health', (req, res) => res.status(200).send('OK'));
+app.get('/api/health', (req, res) => res.status(200).json({ status: 'up', timestamp: new Date() }));
+
 // Ensure uploads directory exists
 const uploadsDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadsDir)) {
@@ -77,7 +81,12 @@ app.get('/agent', (req, res) => res.sendFile(path.join(__dirname, '..', 'fronten
 app.use((req, res) => res.status(404).json({ message: 'Route not found' }));
 
 // Serve Static Files (Frontend)
-app.use(express.static(path.join(__dirname, '..', 'frontend')));
+const frontendPath = path.join(__dirname, '..', 'frontend');
+console.log(`📂 Serving static files from: ${frontendPath}`);
+if (!fs.existsSync(frontendPath)) {
+  console.warn('⚠️ WARNING: frontend directory not found at:', frontendPath);
+}
+app.use(express.static(frontendPath));
 
 // Page Routes (Simplified SPA behavior for Render)
 app.get('/auth', (req, res) => res.sendFile(path.join(__dirname, '..', 'frontend', 'auth.html')));
