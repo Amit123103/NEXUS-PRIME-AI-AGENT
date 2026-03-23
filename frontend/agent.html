@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NEXUS PRIME OMEGA AI AGENT — Agent</title>
+  <meta name="description" content="NEXUS PRIME OMEGA AI Agent — Your superintelligent assistant.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/agent.css">
+</head>
+<body>
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo" id="sidebarLogo">
+        <span class="logo-icon">⚡</span>
+        <span class="logo-text" id="logoText">NEXUS<span class="logo-accent">PRIME</span> OMEGA <small style="font-size: 0.5rem; opacity: 0.7; display: block; margin-top: -2px;">AI AGENT</small></span>
+      </div>
+      <div class="sidebar-controls">
+        <button class="sidebar-collapse-btn" id="collapseSidebarBtn" title="Collapse Sidebar (Ctrl+B)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+        </button>
+        <button class="sidebar-toggle" id="sidebarClose" aria-label="Close sidebar">✕</button>
+      </div>
+    </div>
+
+    <button class="new-chat-btn" id="newChatBtn">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      <span class="btn-text">New Chat</span>
+    </button>
+
+    <!-- User Profile Card -->
+    <div class="profile-card" id="profileCard">
+      <div class="profile-avatar" id="profileAvatar">NP</div>
+      <div class="profile-info">
+        <div class="profile-name" id="profileName">User</div>
+        <div class="profile-role" id="profileRole">user</div>
+      </div>
+    </div>
+
+    <!-- Chat History -->
+    <div class="chat-history" id="chatHistory">
+      <div class="history-section">
+        <div class="history-label">Today</div>
+        <div class="history-list" id="historyToday"></div>
+      </div>
+      <div class="history-section">
+        <div class="history-label">Previous</div>
+        <div class="history-list" id="historyOlder"></div>
+      </div>
+    </div>
+
+    <!-- Sidebar Footer -->
+    <div class="sidebar-footer">
+      <div class="footer-row theme-positioner">
+        <button class="sidebar-action" id="themeMenuBtn" title="Theme Settings">
+          <span id="themeIcon">🌙</span> <span id="themeText">Dark Mode</span>
+        </button>
+        <div class="theme-menu" id="themeMenu">
+          <button class="theme-opt-item" data-theme="dark"><span>🌙</span> Dark</button>
+          <button class="theme-opt-item" data-theme="light"><span>☀️</span> Light</button>
+          <button class="theme-opt-item" data-theme="cyber"><span>⚡</span> Cyber</button>
+          <button class="theme-opt-item" data-theme="midnight"><span>🌑</span> Midnight</button>
+          <button class="theme-opt-item" data-theme="sunset"><span>🌅</span> Sunset</button>
+          <button class="theme-opt-item" data-theme="matrix"><span>📟</span> Matrix</button>
+        </div>
+      </div>
+      <div class="footer-row">
+        <button class="sidebar-action logout" id="logoutBtn">
+          <span>🚪</span> <span>Logout</span>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Chat Area -->
+  <main class="main" id="main">
+    <!-- Top Bar -->
+    <div class="topbar" id="topbar">
+      <div class="topbar-left">
+        <button class="topbar-menu" id="sidebarOpen" aria-label="Open sidebar">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <div class="topbar-title" id="topbarTitle">NEXUS PRIME OMEGA AI AGENT</div>
+      </div>
+      <div class="topbar-right">
+        <div class="topbar-engine">
+          <div class="engine-select-wrapper">
+            <span class="engine-label">Engine:</span>
+            <div class="engine-options" id="engineSelection">
+              <button class="engine-opt active" data-level="NORMAL">Normal</button>
+              <button class="engine-opt" data-level="INTERMEDIATE">Int</button>
+              <button class="engine-opt" data-level="ADVANCED">Adv</button>
+              <button class="engine-opt god-level" data-level="GOD LEVEL" title="Supreme Intelligence">God</button>
+            </div>
+            <div class="mode-divider"></div>
+            <span class="engine-label">Mode:</span>
+            <select class="mode-dropdown" id="modeSelection">
+              <option value="EXPERT">Expert</option>
+              <option value="BEGINNER">Beginner</option>
+              <option value="CREATIVE">Creative</option>
+              <option value="URGENT">Urgent</option>
+              <option value="LIGHT">Light</option>
+              <option value="NATURAL">Natural</option>
+              <option value="PROFESSIONAL">Professional</option>
+              <option value="SCIENTIFIC">Scientific</option>
+              <option value="POETIC">Poetic</option>
+              <option value="CODE-MASTER">Code-Master</option>
+            </select>
+          </div>
+        </div>
+        <div class="topbar-incognito">
+          <div class="incognito-toggle-wrapper topbar-style">
+            <div class="incognito-icon">🕵️</div>
+            <span class="incognito-label">Incognito</span>
+            <label class="switch small">
+              <input type="checkbox" id="incognitoToggle">
+              <span class="slider round"></span>
+            </label>
+          </div>
+        </div>
+        <button id="shareTopBtn" class="share-btn" title="Share Chat" style="display:none; margin-left: 12px; background: none; border: none; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; gap: 8px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>
+          <span style="font-size: 0.85rem; font-weight: 500;">Share</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Chat Messages -->
+    <div class="chat-area" id="chatArea">
+      <!-- Welcome Screen -->
+      <div class="welcome" id="welcomeScreen">
+        <div class="welcome-icon">⚡</div>
+        <h1 class="welcome-title">Hello, <span class="gradient-text" id="welcomeName">User</span></h1>
+        <p class="welcome-desc">I am NEXUS PRIME OMEGA AI AGENT — your superintelligent AI agent. Upload a file, ask anything, or tell me what to build.</p>
+        <div class="welcome-chips">
+          <button class="chip" data-prompt="Explain quantum computing in simple terms">💡 Explain quantum computing</button>
+          <button class="chip" data-prompt="Write a Python web scraper with error handling">💻 Write a Python scraper</button>
+          <button class="chip" data-prompt="Research the latest AI developments in 2024">🔍 Research AI trends</button>
+          <button class="chip" data-prompt="Create a quiz on machine learning basics">📝 ML basics quiz</button>
+        </div>
+      </div>
+
+      <!-- Messages Container -->
+      <div class="messages" id="messagesContainer"></div>
+    </div>
+
+    <!-- Input Bar -->
+    <div class="input-bar" id="inputBar">
+      <div class="input-actions" id="inputActionsContainer">
+        <!-- Main Options Button -->
+        <button class="action-btn" id="plusBtn" title="More Options">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="plusIcon" style="transition: transform 0.3s ease;">
+            <line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+        </button>
+
+        <!-- Dropdown Menu -->
+        <div class="actions-menu" id="actionsMenu">
+          <button class="menu-item" id="micBtn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" x2="12" y1="19" y2="22"></line></svg>
+            <span>Voice Dictation</span>
+          </button>
+          
+          <button class="menu-item" id="ttsBtn" data-active="false">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" x2="17" y1="9" y2="15"></line><line x1="17" x2="23" y1="9" y2="15"></line></svg>
+            <span id="ttsMenuText">Auto-Speak: OFF</span>
+          </button>
+
+          <label class="menu-item" id="uploadBtn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+            <span>Upload File</span>
+            <input type="file" id="fileInput" accept=".pdf,.doc,.docx,.txt,.csv,.jpg,.jpeg,.png,.webp,.gif,.mp4,.webm,.mov" hidden>
+          </label>
+          
+          <button class="menu-item" id="imageGenBtn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            <span>Generate Image</span>
+          </button>
+          
+          <button class="menu-item" id="videoGenBtn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line><line x1="17" y1="17" x2="22" y2="17"></line><line x1="17" y1="7" x2="22" y2="7"></line></svg>
+            <span>Generate Video</span>
+          </button>
+
+          <button class="menu-item" id="visionBtn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            <span>Vision Analysis</span>
+            <input type="file" id="cameraInput" accept="image/*" hidden>
+          </button>
+
+          <button class="menu-item" id="proteinFoldBtn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 7 4-4 4 4"/><path d="m5 17 4 4 4-4"/><path d="M9 3v18"/><path d="M19 12h-2"/><path d="M19 8h-2"/><path d="M19 16h-2"/><path d="M17 12V6a2 2 0 0 0-2-2h-2"/><path d="M17 12v6a2 2 0 0 1-2 2h-2"/></svg>
+            <span>Protein Folding</span>
+          </button>
+
+          <button class="menu-item" id="deepResearchBtn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/><path d="M7 11h8"/><path d="M11 7v8"/></svg>
+            <span>Deep Research</span>
+          </button>
+        </div>
+      </div>
+      <div class="input-wrapper">
+        <textarea id="messageInput" placeholder="Message NEXUS PRIME OMEGA AI AGENT..." rows="1" maxlength="10000"></textarea>
+      </div>
+      <button class="send-btn" id="sendBtn" disabled title="Send message">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
+    </div>
+
+    <!-- File Preview -->
+    <div class="file-preview" id="filePreview" style="display:none">
+      <div class="file-preview-info">
+        <span class="file-preview-name" id="filePreviewName"></span>
+        <button class="file-preview-remove" id="filePreviewRemove">✕</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- Profile Modal -->
+  <div class="modal-overlay" id="profileModal" style="display:none">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Profile</h3>
+        <button class="modal-close" id="profileModalClose">✕</button>
+      </div>
+      <div class="modal-body" id="profileModalBody">
+        <div class="profile-detail-avatar" id="modalAvatar">NP</div>
+        <div class="profile-detail-name" id="modalName">User</div>
+        <div class="profile-detail-username" id="modalUsername">@username</div>
+        
+        <div class="profile-badges">
+          <span class="badge" id="modalRole">USER</span>
+          <span class="badge location"><i class="icon-loc">📍</i> <span id="modalLocation">Global</span></span>
+        </div>
+
+        <p class="profile-bio" id="modalBio">A superintelligent agent user.</p>
+
+        <div class="profile-social">
+          <a href="#" id="linkGithub" target="_blank" title="GitHub" style="display:none">🌐 GitHub</a>
+          <a href="#" id="linkTwitter" target="_blank" title="Twitter" style="display:none">🐦 Twitter</a>
+          <a href="#" id="linkWebsite" target="_blank" title="Website" style="display:none">🔗 Website</a>
+        </div>
+
+        <div class="profile-stats">
+          <div class="profile-stat">
+            <div class="stat-num" id="statChats">0</div>
+            <div class="stat-lbl">Chats</div>
+          </div>
+          <div class="profile-stat">
+            <div class="stat-num" id="statMessages">0</div>
+            <div class="stat-lbl">Messages</div>
+          </div>
+          <div class="profile-stat">
+            <div class="stat-num" id="statImages">0</div>
+            <div class="stat-lbl">Images</div>
+          </div>
+          <div class="profile-stat">
+            <div class="stat-num" id="statResearch">0</div>
+            <div class="stat-lbl">Points</div>
+          </div>
+        </div>
+        
+        <div class="profile-footer">
+          <div class="profile-detail-since" id="modalSince">Member since...</div>
+          <button class="edit-profile-btn" id="editProfileBtn">Edit Profile</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Profile Modal -->
+  <div class="modal-overlay" id="editProfileModal" style="display:none">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Edit Profile</h3>
+        <button class="modal-close" id="editProfileClose">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="input-group">
+          <label>Full Name</label>
+          <input type="text" id="editFullName" placeholder="Your Name">
+        </div>
+        <div class="input-group">
+          <label>Bio</label>
+          <textarea id="editBio" placeholder="Tell the world about yourself..." maxlength="160"></textarea>
+        </div>
+        <div class="input-group">
+          <label>Location</label>
+          <input type="text" id="editLocation" placeholder="e.g. New York, USA">
+        </div>
+        <div class="input-group">
+          <label>GitHub Username (optional)</label>
+          <input type="text" id="editGithub" placeholder="username">
+        </div>
+        <div class="input-group">
+          <label>Twitter Username (optional)</label>
+          <input type="text" id="editTwitter" placeholder="username">
+        </div>
+        <button class="save-profile-btn" id="saveProfileBtn">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Gallery Modal -->
+  <div class="modal-overlay" id="galleryModal" style="display:none">
+    <div class="modal-card wide">
+      <div class="modal-header">
+        <h3 id="galleryTitle">Generated Images</h3>
+        <button class="modal-close" id="galleryModalClose">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="gallery-grid" id="galleryGrid">
+          <!-- Images or reports load here -->
+        </div>
+        <div id="galleryEmpty" class="gallery-empty" style="display:none">
+          <div class="empty-icon">📂</div>
+          <p>No content found yet.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/agent.js"></script>
+</body>
+</html>

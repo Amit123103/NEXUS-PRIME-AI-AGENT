@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NEXUS PRIME OMEGA AI AGENT — Superintelligent AI Agent</title>
+  <meta name="description" content="NEXUS PRIME OMEGA AI AGENT Omega-3.0 — See everything, create everything, know everything. The most powerful multimodal AI agent platform.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/landing.css">
+</head>
+<body>
+  <!-- Particle Canvas -->
+  <canvas id="particleCanvas"></canvas>
+
+  <!-- Navigation -->
+  <nav class="navbar" id="navbar">
+    <div class="nav-container">
+      <a href="/" class="nav-logo">
+        <span class="logo-icon">⚡</span>
+        <span class="logo-text">NEXUS<span class="logo-accent">PRIME</span> OMEGA</span>
+      </a>
+      <div class="nav-links">
+        <a href="#features">Features</a>
+        <a href="#how-it-works">How It Works</a>
+        <a href="#stats">Specs</a>
+        <a href="auth.html" class="nav-btn nav-btn-ghost">Sign In</a>
+        <a href="auth.html#signup" class="nav-btn nav-btn-primary">Get Started Free</a>
+      </div>
+      <button class="nav-mobile-toggle" id="mobileToggle" aria-label="Toggle menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="hero" id="hero">
+    <div class="hero-bg-grid"></div>
+    <div class="hero-content">
+      <h1 class="hero-title reveal">
+        <span class="title-line">NEXUS PRIME</span>
+        <span class="title-line title-accent text-glow">OMEGA</span>
+      </h1>
+      <p class="hero-subtitle reveal">
+        <span class="typed-text" id="typedText"></span>
+        <span class="typed-cursor">|</span>
+      </p>
+      <p class="hero-desc reveal">
+        The world's most powerful multimodal AI platform. See images. Read documents.
+        Create visuals. Research deeply. Quiz intelligently. Remember everything.
+      </p>
+      <div class="hero-buttons reveal">
+        <a href="auth.html#signup" class="btn btn-primary" id="heroGetStarted">
+          <span>Get Started Free</span>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </a>
+        <a href="auth.html" class="btn btn-ghost" id="heroSignIn">
+          <span>Sign In</span>
+        </a>
+      </div>
+      <div class="hero-tags reveal">
+        <span class="tag">🖼️ Vision</span>
+        <span class="tag">📄 Documents</span>
+        <span class="tag">🎨 Image Gen</span>
+        <span class="tag">🔍 Research</span>
+        <span class="tag">📝 Quiz</span>
+        <span class="tag">💬 Memory</span>
+        <span class="tag">🎬 Video</span>
+        <span class="tag">🔐 Secure</span>
+      </div>
+    </div>
+    <div class="hero-glow"></div>
+  </section>
+
+  <!-- Features Section -->
+  <section class="features" id="features">
+    <div class="container">
+      <div class="section-header reveal">
+        <span class="section-badge">CAPABILITIES</span>
+        <h2 class="section-title">A Symphony of <span class="gradient-text">Neural Engines</span></h2>
+        <p class="section-desc">NEXUS PRIME OMEGA utilizes a distributed architecture of specialized AI models, seamlessly orchestrated to provide a unified intelligence experience.</p>
+      </div>
+      <div class="features-grid">
+        <div class="feature-card reveal" id="featureVision">
+          <div class="feature-icon">🖼️</div>
+          <h3>Image Analysis</h3>
+          <p>Upload any image — get instant OCR, object detection, scene analysis, and detailed descriptions powered by vision AI.</p>
+          <div class="feature-glow"></div>
+        </div>
+        <div class="feature-card reveal" id="featureDocuments">
+          <div class="feature-icon">📄</div>
+          <h3>Document Reader</h3>
+          <p>Upload PDF, DOC, DOCX, PPT, PPTX — instantly read, summarize, and answer questions about your documents.</p>
+          <div class="feature-glow"></div>
+        </div>
+        <div class="feature-card reveal" id="featureImageGen">
+          <div class="feature-icon">🎨</div>
+          <h3>Image Creation</h3>
+          <p>Generate stunning, high-resolution images from text descriptions using state-of-the-art diffusion models.</p>
+          <div class="feature-glow"></div>
+        </div>
+        <div class="feature-card reveal" id="featureVideo">
+          <div class="feature-icon">🎬</div>
+          <h3>Video Generation</h3>
+          <p>Create dynamic video content from text prompts. Animations, scenes, and visual stories on demand.</p>
+          <div class="feature-glow"></div>
+        </div>
+        <div class="feature-card reveal" id="featureResearch">
+          <div class="feature-icon">🔍</div>
+          <h3>Deep Research</h3>
+          <p>Web-wide research with cited sources. Get structured reports with key findings, analysis, and expert insights.</p>
+          <div class="feature-glow"></div>
+        </div>
+        <div class="feature-card reveal" id="featureQuiz">
+          <div class="feature-icon">📝</div>
+          <h3>Quiz Generator</h3>
+          <p>Turn any content into interactive quizzes. Multiple choice, true/false, and scenario-based questions with scoring.</p>
+          <div class="feature-glow"></div>
+        </div>
+        <div class="feature-card reveal" id="featureChat">
+          <div class="feature-icon">💬</div>
+          <h3>Smart Chat</h3>
+          <p>Context-aware conversations with full memory. Every chat saved, searchable, and organized by date.</p>
+          <div class="feature-glow"></div>
+        </div>
+        <div class="feature-card reveal" id="featureSecurity">
+          <div class="feature-icon">🔐</div>
+          <h3>Secure & Private</h3>
+          <p>256-bit encryption, JWT authentication, and complete data isolation. Your conversations stay yours.</p>
+          <div class="feature-glow"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Professional Architecture Section -->
+  <section class="about-nexus" id="about-nexus">
+    <div class="container">
+      <div class="about-grid">
+        <div class="about-content reveal">
+          <span class="section-badge">CORE PROTOCOL</span>
+          <h2>The Architecture of <br> <span class="accent-cyan">Superintelligence</span></h2>
+          <p class="arch-subtitle">NEXUS PRIME OMEGA-3.0 operates on a proprietary hybrid neural framework, orchestrating high-density compute clusters with biological precision.</p>
+          
+          <div class="arch-list">
+            <div class="arch-item">
+              <div class="arch-icon">⚡</div>
+              <div class="arch-info">
+                <h4>Neural Multimodality</h4>
+                <p>Concurrent processing of high-fidelity visual streams and linguistic vectors within a unified context window.</p>
+              </div>
+            </div>
+            <div class="arch-item">
+              <div class="arch-icon">🔍</div>
+              <div class="arch-info">
+                <h4>Autonomous Web Synthesis</h4>
+                <p>Global internet indexing with multi-source recursive verification to ensure cryptographic factual accuracy.</p>
+              </div>
+            </div>
+            <div class="arch-item">
+              <div class="arch-icon">🧬</div>
+              <div class="arch-info">
+                <h4>Scientific Computation</h4>
+                <p>Embedded ESMfold-3.0 integration for real-time protein structure prediction and molecular pattern recognition.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="about-visual reveal">
+          <div class="visual-glow"></div>
+          <div class="console-window">
+             <div class="console-header">
+               <div class="console-dots">
+                 <span></span><span></span><span></span>
+               </div>
+               <div class="console-title">NEXUS_SYSTEM_CORE</div>
+             </div>
+             <div class="console-body">
+               <div class="console-line"><span class="line-time">[17:42:01]</span> <span class="line-status">INIT</span> Booting Neural Overlord v3.0.4...</div>
+               <div class="console-line"><span class="line-time">[17:42:03]</span> <span class="line-status">OK</span> Multi-Modal Sync: Synchronized (99.9%)</div>
+               <div class="console-line"><span class="line-time">[17:42:04]</span> <span class="line-status">OK</span> Mounting NVIDIA A100 Tensor Clusters...</div>
+               <div class="console-line"><span class="line-time">[17:42:05]</span> <span class="line-status">OK</span> Biological Node (Phi-3) Connected.</div>
+               <div class="console-line command">system.status --check-all</div>
+               <div class="console-line divider"></div>
+               <div class="console-line success">READY: NEXUS PRIME OMEGA-3.0 ONLINE</div>
+               <div class="console-line cursor">_</div>
+             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works -->
+  <section class="how-it-works" id="how-it-works">
+    <div class="container">
+      <div class="section-header reveal">
+        <span class="section-badge">WORKFLOW</span>
+        <h2 class="section-title">From Zero to <span class="gradient-text">Genius</span> in 4 Steps</h2>
+      </div>
+      <div class="steps-grid">
+        <div class="step-card reveal" id="step1">
+          <div class="step-number">01</div>
+          <div class="step-content">
+            <h3>Create Account</h3>
+            <p>Sign up in seconds. No credit card. No limits on getting started.</p>
+          </div>
+          <div class="step-line"></div>
+        </div>
+        <div class="step-card reveal" id="step2">
+          <div class="step-number">02</div>
+          <div class="step-content">
+            <h3>Upload or Ask</h3>
+            <p>Drop files, upload images, or simply type your request. NEXUS understands everything.</p>
+          </div>
+          <div class="step-line"></div>
+        </div>
+        <div class="step-card reveal" id="step3">
+          <div class="step-number">03</div>
+          <div class="step-content">
+            <h3>NEXUS Thinks</h3>
+            <p>All eight engines activate in parallel — analyzing, creating, researching, generating.</p>
+          </div>
+          <div class="step-line"></div>
+        </div>
+        <div class="step-card reveal" id="step4">
+          <div class="step-number">04</div>
+          <div class="step-content">
+            <h3>Perfect Results</h3>
+            <p>Get complete, professional, ready-to-use output. Every time. No exceptions.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Stats / Trust Section -->
+  <section class="stats-section" id="stats">
+    <div class="container">
+      <div class="stats-grid">
+        <div class="stat-card reveal" id="statParams">
+          <div class="stat-value">235B</div>
+          <div class="stat-label">Parameters</div>
+        </div>
+        <div class="stat-card reveal" id="statUptime">
+          <div class="stat-value">99.9%</div>
+          <div class="stat-label">Uptime</div>
+        </div>
+        <div class="stat-card reveal" id="statEncryption">
+          <div class="stat-value">256-bit</div>
+          <div class="stat-label">Encrypted</div>
+        </div>
+        <div class="stat-card reveal" id="statFormats">
+          <div class="stat-value">10+</div>
+          <div class="stat-label">File Formats</div>
+        </div>
+        <div class="stat-card reveal" id="statResearch">
+          <div class="stat-value">Real-time</div>
+          <div class="stat-label">Research</div>
+        </div>
+        <div class="stat-card reveal" id="statCompliance">
+          <div class="stat-value">GDPR</div>
+          <div class="stat-label">Compliant</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA Section -->
+  <section class="cta-section" id="cta">
+    <div class="container">
+      <div class="cta-card reveal">
+        <h2>Ready to Experience <span class="gradient-text">Superintelligence</span>?</h2>
+        <p>Join thousands using NEXUS PRIME OMEGA to see, think, create, and build at superhuman speed.</p>
+        <a href="auth.html#signup" class="btn btn-primary btn-large" id="ctaGetStarted">
+          <span>Get Started Free</span>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer" id="footer">
+    <div class="container">
+      <div class="footer-content">
+        <div class="footer-brand">
+          <div class="nav-logo">
+            <span class="logo-icon">⚡</span>
+            <span class="logo-text">NEXUS<span class="logo-accent">PRIME</span></span>
+          </div>
+          <p>See. Think. Create. Research. Quiz. Build.</p>
+        </div>
+        <div class="footer-links">
+          <div class="footer-col">
+            <h4>Product</h4>
+            <a href="#features">Features</a>
+            <a href="#how-it-works">How It Works</a>
+            <a href="#stats">Specifications</a>
+          </div>
+          <div class="footer-col">
+            <h4>Account</h4>
+            <a href="auth.html">Sign In</a>
+            <a href="auth.html#signup">Sign Up</a>
+          </div>
+          <div class="footer-col">
+            <h4>Legal</h4>
+            <a href="javascript:void(0)" onclick="openModal('privacy')">Privacy Policy</a>
+            <a href="javascript:void(0)" onclick="openModal('terms')">Terms of Service</a>
+            <a href="javascript:void(0)" onclick="openModal('contact')">Contact</a>
+          </div>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; 2024 NEXUS PRIME OMEGA AI AGENT. Powered by NEXUS PRIME OMEGA AI AGENT.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Cookie Consent Banner -->
+  <div class="cookie-banner" id="cookieBanner">
+    <div class="cookie-container">
+      <div class="cookie-content">
+        <div class="cookie-icon">🍪</div>
+        <div class="cookie-text">
+          <strong>Privacy Insights</strong>
+          <p>NEXUS PRIME OMEGA uses essential cookies for secure JWT authentication and preference synchronization. We never use third-party tracking. <a href="javascript:void(0)" onclick="openModal('privacy')">Learn more</a></p>
+        </div>
+      </div>
+      <div class="cookie-actions">
+        <button class="btn btn-ghost btn-sm" onclick="setCookieConsent('rejected')">Reject Non-Essential</button>
+        <button class="btn btn-primary btn-sm" onclick="setCookieConsent('accepted')">Accept All</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Legal Modals -->
+  <div class="modal-overlay" id="modalOverlay" onclick="closeModal()">
+    <div class="modal-container" onclick="event.stopPropagation()">
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+      <div class="modal-content" id="modalBody">
+        <!-- Content injected via JS -->
+      </div>
+    </div>
+  </div>
+
+  <script src="js/landing.js"></script>
+  <script>
+    const modalContent = {
+      privacy: `
+        <h2>Privacy Policy</h2>
+        <p>Last updated: March 2024</p>
+        <div class="legal-scroll">
+          <p>At NEXUS PRIME OMEGA AI AGENT, your privacy is our highest priority. Our OMEGA-3.0 framework is designed with biological data isolation protocols.</p>
+          <h3>1. Data Encryption</h3>
+          <p>All user interactions are encrypted using 256-bit AES at rest and TLS 1.3 in transit. Your chat history is cryptographically locked to your unique account identifier.</p>
+          <h3>2. Neural Isolation</h3>
+          <p>We do not use your personal data or private chats to train our baseline models. Your intelligence remains yours.</p>
+          <h3>3. Zero Third-Party Access</h3>
+          <p>NEXUS PRIME OMEGA does not sell or lease user data to any third-party entities. All external API processing (NVIDIA/Biological nodes) is performed via stateless, anonymized streams.</p>
+        </div>
+      `,
+      terms: `
+        <h2>Terms of Service</h2>
+        <p>Acceptance of Neural Interaction Protocol</p>
+        <div class="legal-scroll">
+          <h3>1. Usage Rights</h3>
+          <p>By using NEXUS PRIME OMEGA, you are granted a non-exclusive license to utilize OMEGA-3.0 for legitimate research, creative, and professional purposes.</p>
+          <h3>2. Intellectual Property</h3>
+          <p>All outputs generated by NEXUS PRIME OMEGA are the sole property of the user. You hold full commercial rights to images, text, and videos synthesized by the agent.</p>
+          <h3>3. Acceptable Use</h3>
+          <p>Users must not use the platform for the synthesis of illegal content, malicious software development, or automated disinformation campaigns.</p>
+          <h3>4. Liability</h3>
+          <p>NEXUS PRIME OMEGA provided "as-is". While accuracy exceeds 99%, we recommend human verification for critical scientific or legal decisions.</p>
+        </div>
+      `,
+      contact: `
+        <h2>Contact NEXUS Team</h2>
+        <p>Operational Status: Global Distributed</p>
+        <div class="contact-grid">
+          <div class="contact-item">
+            <strong>📧 Technical Support</strong>
+            <p>support@nexusprime.ai</p>
+          </div>
+          <div class="contact-item">
+            <strong>🌐 Business Inquiry</strong>
+            <p>partners@nexusprime.ai</p>
+          </div>
+          <div class="contact-item">
+            <strong>📍 Neural Hub</strong>
+            <p>Phagwara Punjab near LPU</p>
+          </div>
+          <div class="contact-item">
+            <strong>🕒 Response Time</strong>
+            <p>&lt; 4 Cycles (Approx. 2 Hours)</p>
+          </div>
+        </div>
+        <div style="margin-top: 30px; text-align: center;">
+          <a href="mailto:support@nexusprime.ai" class="btn btn-primary">Send Message</a>
+        </div>
+      `
+    };
+
+    function openModal(type) {
+      document.getElementById('modalBody').innerHTML = modalContent[type];
+      document.getElementById('modalOverlay').classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal() {
+      document.getElementById('modalOverlay').classList.remove('active');
+      document.body.style.overflow = 'auto';
+    }
+
+    // Cookie Consent Logic
+    function checkCookieConsent() {
+      const consent = localStorage.getItem('nexus_cookie_consent');
+      if (!consent) {
+        setTimeout(() => {
+          document.getElementById('cookieBanner').classList.add('active');
+        }, 1000);
+      }
+    }
+
+    function setCookieConsent(status) {
+      localStorage.setItem('nexus_cookie_consent', status);
+      document.getElementById('cookieBanner').classList.remove('active');
+    }
+
+    window.addEventListener('load', checkCookieConsent);
+  </script>
+</body>
+</html>
