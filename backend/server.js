@@ -25,28 +25,19 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false
 }));
 
+// CORS Configuration
 app.use(cors({
-  origin: process.env.APP_URL || 'http://localhost:3005',
+  origin: '*', // Allow all for public AI gateway, or refine via APP_URL
   credentials: true
 }));
-
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-  message: { message: 'Too many requests' }
-});
-app.use('/api/', limiter);
 
 // Body parsers
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Favicon handler (prevents 404)
-app.get('/favicon.ico', (req, res) => res.status(204).end());
-
-// Serve static files (Frontend)
-app.use(express.static(path.join(__dirname, '..', 'frontend')));
+// Assets & Static Files
+const frontendPath = path.join(__dirname, '..', 'frontend');
+app.use(express.static(frontendPath));
 app.use('/uploads', express.static(uploadsDir));
 
 // API Routes
@@ -59,22 +50,16 @@ app.use('/api/protein', proteinRoutes);
 app.use('/api/research', researchRoutes);
 app.use('/api/asr', require('./routes/asr'));
 
-// Static files (Frontend)
-const frontendPath = path.join(__dirname, '..', 'frontend');
-app.use(express.static(frontendPath));
-app.use('/uploads', express.static(uploadsDir));
-
-// Page routes
-app.get('/', (req, res) => res.sendFile(path.join(frontendPath, 'index.html')));
+// SPA Support: Serve specific pages or fallback to index
 app.get('/agent', (req, res) => res.sendFile(path.join(frontendPath, 'agent.html')));
-
-// Catch-all to serve index.html for undefined routes (SPA support)
 app.get('*', (req, res) => {
+  // If it's an API route that wasn't caught, return 404 JSON
+  if (req.path.startsWith('/api/')) {
+    return res.status(404).json({ message: 'API Route not found' });
+  }
+  // Otherwise serve the main index
   res.sendFile(path.join(frontendPath, 'index.html'));
 });
-
-// 404 API fallback (only if not caught by static/HTML)
-app.use('/api/*', (req, res) => res.status(404).json({ message: 'API Route not found' }));
 
 // Error handling
 app.use((err, req, res, next) => {
