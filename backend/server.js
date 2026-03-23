@@ -76,25 +76,36 @@ app.get('/agent', (req, res) => res.sendFile(path.join(__dirname, '..', 'fronten
 // 404 handler
 app.use((req, res) => res.status(404).json({ message: 'Route not found' }));
 
-// Error handler
+// Serve Static Files (Frontend)
+app.use(express.static(path.join(__dirname, '..', 'frontend')));
+
+// Page Routes (Simplified SPA behavior for Render)
+app.get('/auth', (req, res) => res.sendFile(path.join(__dirname, '..', 'frontend', 'auth.html')));
+app.get('/agent', (req, res) => res.sendFile(path.join(__dirname, '..', 'frontend', 'agent.html')));
+app.get('/reset-password', (req, res) => res.sendFile(path.join(__dirname, '..', 'frontend', 'reset-password.html')));
+
+// Catch-all to serve index.html for undefined routes
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api')) return next();
+  res.sendFile(path.join(__dirname, '..', 'frontend', 'index.html'));
+});
+
+// Error handling
 app.use((err, req, res, next) => {
   console.error('Server error:', err);
   res.status(500).json({ message: 'Internal server error' });
 });
 
-// Start server for Local Development or Persistent Cloud (Render/Railway)
+// Start server (Unified Render/Railway/Local)
 const PORT = process.env.PORT || 3005;
-
-if (!process.env.VERCEL) {
-  app.listen(PORT, () => {
-    console.log(`
+app.listen(PORT, () => {
+  console.log(`
 ╔══════════════════════════════════════════════╗
 ║             ⚡ NEXUS PRIME OMEGA ⚡          ║
 ║         Server running on port ${PORT}          ║
 ║         Mode: ${process.env.NODE_ENV || 'development'}           ║
 ╚══════════════════════════════════════════════╝`);
-  });
-}
+});
 
-// Export for Vercel Serverless
+// Export app
 module.exports = app;
