@@ -82,15 +82,16 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: 'Internal server error' });
 });
 
-// Start server for Local Development
+// Start server for Local Development or Persistent Cloud (Render/Railway)
 const PORT = process.env.PORT || 3005;
-if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+
+if (!process.env.VERCEL) {
   app.listen(PORT, () => {
     console.log(`
 ╔══════════════════════════════════════════════╗
 ║             ⚡ NEXUS PRIME OMEGA ⚡          ║
 ║         Server running on port ${PORT}          ║
-║         http://localhost:${PORT}               ║
+║         Mode: ${process.env.NODE_ENV || 'development'}           ║
 ╚══════════════════════════════════════════════╝`);
   });
 }
