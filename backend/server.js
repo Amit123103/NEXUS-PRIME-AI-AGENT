@@ -88,7 +88,7 @@ if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
   app.listen(PORT, () => {
     console.log(`
 ╔══════════════════════════════════════════════╗
-║         ⚡ NEXUS PRIME OMEGA-3.0 ⚡          ║
+║             ⚡ NEXUS PRIME OMEGA ⚡          ║
 ║         Server running on port ${PORT}          ║
 ║         http://localhost:${PORT}               ║
 ╚══════════════════════════════════════════════╝`);
