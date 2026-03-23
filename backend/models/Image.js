@@ -1,25 +1,10 @@
-const { sql } = require('@vercel/postgres');
+const mongoose = require('mongoose');
 
-const Image = {
-  // Find images for user
-  find: async (query) => {
-    const { rows } = await sql`
-      SELECT * FROM images 
-      WHERE user_id = ${query.user} 
-      ORDER BY created_at DESC;
-    `;
-    return rows;
-  },
+const imageSchema = new mongoose.Schema({
+  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  url: { type: String, required: true },
+  prompt: { type: String, required: true },
+  type: { type: String, default: 'generated' }
+}, { timestamps: true });
 
-  // Create image record
-  create: async ({ user, url, prompt, type }) => {
-    const { rows } = await sql`
-      INSERT INTO images (user_id, url, prompt, type)
-      VALUES (${user}, ${url}, ${prompt}, ${type})
-      RETURNING *;
-    `;
-    return rows[0];
-  }
-};
-
-module.exports = Image;
+module.exports = mongoose.model('Image', imageSchema);

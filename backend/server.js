@@ -44,8 +44,8 @@ const authLimiter = rateLimit({
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
 
-// Initialize Database (Vercel Postgres)
-connectDB().catch(err => console.error('Database connection failed:', err));
+// Initialize Database (MongoDB Atlas)
+connectDB();
 
 // Body parsers
 app.use(express.json({ limit: '10mb' }));
