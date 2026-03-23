@@ -7,11 +7,9 @@ const rateLimit = require('express-rate-limit');
 const fs = require('fs');
 const proteinRoutes = require('./routes/protein');
 const researchRoutes = require('./routes/research');
-const connectDB = require('./config/db');
-
 const app = express();
 
-// Basic Health Check (Helps Render avoid 502/503 during boot)
+// Basic Health Check
 app.get('/health', (req, res) => res.status(200).send('OK'));
 app.get('/api/health', (req, res) => res.status(200).json({ status: 'up', timestamp: new Date() }));
 
@@ -36,23 +34,9 @@ app.use(cors({
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
-  message: { message: 'Too many requests, please try again later.' }
+  message: { message: 'Too many requests' }
 });
 app.use('/api/', limiter);
-
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 20,
-  message: { message: 'Too many auth attempts, please try again later.' }
-});
-app.use('/api/auth/login', authLimiter);
-app.use('/api/auth/register', authLimiter);
-
-// Initialize Database (MongoDB Atlas) in background to prevent startup blocks
-connectDB().catch(err => {
-  console.error('⚠️ Critical Database Error during background connect:', err.message);
-  // We don't exit here immediately so the server can still respond with 503/500 to health checks
-});
 
 // Body parsers
 app.use(express.json({ limit: '10mb' }));
@@ -75,32 +59,22 @@ app.use('/api/protein', proteinRoutes);
 app.use('/api/research', researchRoutes);
 app.use('/api/asr', require('./routes/asr'));
 
-// Page routes (Client-side routing support)
-app.get('/', (req, res) => res.sendFile(path.join(__dirname, '..', 'frontend', 'index.html')));
-app.get('/auth', (req, res) => res.sendFile(path.join(__dirname, '..', 'frontend', 'auth.html')));
-app.get('/agent', (req, res) => res.sendFile(path.join(__dirname, '..', 'frontend', 'agent.html')));
-
-// 404 handler
-app.use((req, res) => res.status(404).json({ message: 'Route not found' }));
-
-// Serve Static Files (Frontend)
+// Static files (Frontend)
 const frontendPath = path.join(__dirname, '..', 'frontend');
-console.log(`📂 Serving static files from: ${frontendPath}`);
-if (!fs.existsSync(frontendPath)) {
-  console.warn('⚠️ WARNING: frontend directory not found at:', frontendPath);
-}
 app.use(express.static(frontendPath));
+app.use('/uploads', express.static(uploadsDir));
 
-// Page Routes (Simplified SPA behavior for Render)
-app.get('/auth', (req, res) => res.sendFile(path.join(__dirname, '..', 'frontend', 'auth.html')));
-app.get('/agent', (req, res) => res.sendFile(path.join(__dirname, '..', 'frontend', 'agent.html')));
-app.get('/reset-password', (req, res) => res.sendFile(path.join(__dirname, '..', 'frontend', 'reset-password.html')));
+// Page routes
+app.get('/', (req, res) => res.sendFile(path.join(frontendPath, 'index.html')));
+app.get('/agent', (req, res) => res.sendFile(path.join(frontendPath, 'agent.html')));
 
-// Catch-all to serve index.html for undefined routes
-app.get('*', (req, res, next) => {
-  if (req.path.startsWith('/api')) return next();
-  res.sendFile(path.join(__dirname, '..', 'frontend', 'index.html'));
+// Catch-all to serve index.html for undefined routes (SPA support)
+app.get('*', (req, res) => {
+  res.sendFile(path.join(frontendPath, 'index.html'));
 });
+
+// 404 API fallback (only if not caught by static/HTML)
+app.use('/api/*', (req, res) => res.status(404).json({ message: 'API Route not found' }));
 
 // Error handling
 app.use((err, req, res, next) => {

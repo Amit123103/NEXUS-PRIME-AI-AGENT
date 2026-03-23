@@ -4,7 +4,7 @@
 // ═══════════════════════════════════════════════
 
 document.addEventListener('DOMContentLoaded', () => {
-  const API = 'https://nexus-prime-omega.onrender.com';
+  const API = 'http://localhost:3005';
   let currentChatId = null;
   let currentUser = null;
   let uploadedFile = null;
@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // ── Auth Guard ──────────────────────────────
   const token = localStorage.getItem('nexus_token');
   if (!token) {
-    window.location.href = '/auth';
+    window.location.href = 'index.html';
     return;
   }
 
@@ -32,7 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
       localStorage.removeItem('nexus_token');
       localStorage.removeItem('nexus_refresh');
       localStorage.removeItem('nexus_user');
-      window.location.href = '/auth';
+      window.location.href = 'index.html';
       return null;
     }
     return res;
@@ -99,7 +99,7 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('modalAvatar').textContent = initials;
       document.getElementById('modalName').textContent = currentUser.fullName;
       document.getElementById('modalUsername').textContent = `@${currentUser.username}`;
-      document.getElementById('modalRole').textContent = currentUser.role.toUpperCase();
+      document.getElementById('modalRole').textContent = (currentUser.role || 'USER').toUpperCase();
       document.getElementById('modalBio').textContent = currentUser.bio || 'A superintelligent agent user.';
       document.getElementById('modalLocation').textContent = currentUser.location || 'Global';
 

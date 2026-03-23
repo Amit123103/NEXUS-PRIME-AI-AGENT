@@ -1,41 +1,67 @@
 const express = require('express');
 const { protect } = require('../middleware/authMiddleware');
-const Image = require('../models/Image');
-const User = require('../models/User');
 const path = require('path');
 const fs = require('fs');
 
 const router = express.Router();
 
-// POST /api/image/generate — Generate image (Mongoose)
+// POST /api/image/generate — Generate image (Stateless + NVIDIA SDXL)
 router.post('/generate', protect, async (req, res) => {
   try {
     const { prompt } = req.body;
     if (!prompt) return res.status(400).json({ message: 'Prompt required' });
 
-    // NVIDIA API Call (Omitted for brevity, use existing logic)
-    const fileName = `generated_${Date.now()}.png`;
-    const imageUrl = `/uploads/${fileName}`;
+    const apiKey = process.env.NVIDIA_IMAGE_API_KEY || process.env.NVIDIA_API_KEY;
     
-    const image = await Image.create({
-      user: req.user._id,
-      url: imageUrl,
-      prompt: prompt.trim()
+    console.log(`🎨 Generating image for: "${prompt.substring(0, 50)}..."`);
+
+    const response = await fetch('https://ai.api.nvidia.com/v1/genai/stabilityai/stable-diffusion-xl', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({
+        text_prompts: [{ text: prompt.trim(), weight: 1 }],
+        cfg_scale: 7,
+        sampler: 'K_DPM_2_ANCESTRAL',
+        steps: 25,
+        height: 1024,
+        width: 1024,
+        samples: 1
+      })
     });
 
-    await User.findByIdAndUpdate(req.user._id, { $inc: { 'stats.imagesCreated': 1 } });
+    if (!response.ok) {
+      const err = await response.text();
+      console.error('NVIDIA Image API error:', err);
+      throw new Error(`NVIDIA API failed: ${response.status}`);
+    }
 
-    res.json({ success: true, imageUrl: image.url, prompt: image.prompt });
+    const data = await response.json();
+    if (!data.artifacts || data.artifacts.length === 0) {
+      throw new Error('No image artifact returned');
+    }
+
+    const base64Data = data.artifacts[0].base64;
+    const fileName = `generated_${Date.now()}.png`;
+    const filePath = path.join(__dirname, '..', 'uploads', fileName);
+    
+    fs.writeFileSync(filePath, Buffer.from(base64Data, 'base64'));
+    
+    res.json({ success: true, imageUrl: `/uploads/${fileName}`, prompt: prompt.trim() });
   } catch (error) {
+    console.error('Image Generation Error:', error);
     res.status(500).json({ message: 'Generation failed' });
   }
 });
 
-// GET /api/image/gallery — Get gallery
+// GET /api/image/gallery — Get gallery (Stateless placeholder)
 router.get('/gallery', protect, async (req, res) => {
   try {
-    const images = await Image.find({ user: req.user._id }).sort({ createdAt: -1 });
-    res.json({ success: true, images });
+    // Return empty gallery for now
+    res.json({ success: true, images: [] });
   } catch (error) {
     res.status(500).json({ message: 'Error fetching gallery' });
   }

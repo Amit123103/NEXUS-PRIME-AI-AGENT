@@ -157,4 +157,30 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // ── Auto Login Guest Flow ─────────────────
+  const autoLoginBtns = document.querySelectorAll('.auto-login-btn');
+  autoLoginBtns.forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      try {
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<span>Entering NEXUS...</span>';
+        const res = await fetch('http://localhost:3005/api/auth/guest', { method: 'POST' });
+        if (res.ok) {
+          const data = await res.json();
+          localStorage.setItem('nexus_token', data.accessToken);
+          localStorage.setItem('nexus_refresh', data.refreshToken);
+          localStorage.setItem('nexus_user', JSON.stringify(data.user));
+          window.location.href = 'agent.html';
+        } else {
+          alert('Failed to launch application. Please try again.');
+          btn.innerHTML = originalText;
+        }
+      } catch (err) {
+        console.error('Auto login error:', err);
+        alert('Internal server error. Ensure server is running.');
+      }
+    });
+  });
+
 });
