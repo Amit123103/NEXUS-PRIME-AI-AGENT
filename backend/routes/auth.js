@@ -2,6 +2,8 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { body, validationResult } = require('express-validator');
+const { sql } = require('@vercel/postgres');
+const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const { protect } = require('../middleware/authMiddleware');
 const sendEmail = require('../utils/sendEmail');
@@ -35,73 +37,39 @@ router.post('/register', [
 
     const { fullName, username, email, password } = req.body;
 
-    const existingUser = await User.findOne({ $or: [{ email }, { username }] });
-    if (existingUser) {
-      const field = existingUser.email === email ? 'Email' : 'Username';
-      return res.status(400).json({ message: `${field} already exists` });
+    const existingUser = await User.findOne({ email });
+    const existingUsername = await User.findOne({ username });
+    
+    if (existingUser || existingUsername) {
+      return res.status(400).json({ message: existingUser ? 'Email already exists' : 'Username already exists' });
     }
 
     const user = await User.create({ fullName, username, email, password });
-    const token = generateToken(user._id);
-    const refreshToken = generateRefreshToken(user._id);
+    const token = generateToken(user.id);
+    const refreshToken = generateRefreshToken(user.id);
 
-    // ── Send Welcome Email ──────────────────
-    try {
-      await sendEmail({
+    // ── Send Welcome Email (Fire and forget) ──
+    sendEmail({
         email: user.email,
-        subject: 'Welcome to NEXUS PRIME OMEGA AI AGENT — Your Intelligence Upgraded!',
-        message: `Hello ${user.fullName},\n\nWelcome to NEXUS PRIME OMEGA AI AGENT! Your account has been successfully created.\n\nYou now have access to a unified ecosystem of superintelligence, including:\n- Global Deep Research (Real-time Synthesis)\n- Neural Vision Analysis (Image-to-Reasoning)\n- ESMfold Biological Computation\n- Creative Diffusion Engines\n\nLogin to your dashboard: ${process.env.FRONTEND_URL || 'http://localhost:3005'}/auth\n\nStay sharp,\nThe NEXUS TEAM`,
-        html: `
-          <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 16px; background-color: #ffffff;">
-            <div style="text-align: center; margin-bottom: 30px;">
-              <h1 style="color: #00d4ff; font-family: 'Orbitron', sans-serif; margin: 0;">⚡ NEXUS PRIME OMEGA</h1>
-              <p style="color: #64748b; font-size: 0.9rem;">The Future of Multi-Modal Intelligence</p>
-            </div>
-            
-            <p style="font-size: 1.1rem; color: #1e293b;">Hello <strong>${user.fullName}</strong>,</p>
-            <p style="color: #475569; line-height: 1.6;">Your journey into superintelligence begins now. Your account is active and you have been granted access to the OMEGA-3.0 neural framework.</p>
-            
-            <div style="background: #f8fafc; padding: 25px; border-radius: 12px; margin: 25px 0; border: 1px solid #f1f5f9;">
-              <h3 style="color: #1e293b; margin-top: 0;">Core Platform Capabilities:</h3>
-              <ul style="color: #475569; line-height: 1.8; padding-left: 20px;">
-                <li><strong>Autonomous Research:</strong> Real-time cross-verification of global data.</li>
-                <li><strong>Neural Vision:</strong> Sophisticated image analysis and reasoning.</li>
-                <li><strong>Molecular Science:</strong> Integrated protein structure prediction.</li>
-                <li><strong>Dynamic Synthesis:</strong> 10+ behavioral modes for tailored AI response.</li>
-              </ul>
-            </div>
-            
-            <div style="text-align: center; margin-top: 35px;">
-              <a href="${process.env.FRONTEND_URL || 'http://localhost:3005'}/auth" style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #00d4ff, #7c3aed); color: #ffffff; text-decoration: none; border-radius: 50px; font-weight: bold; box-shadow: 0 4px 12px rgba(0, 212, 255, 0.3);">Launch Your Intelligence</a>
-            </div>
-            
-            <p style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #f1f5f9; font-size: 0.75rem; color: #94a3b8; text-align: center;">
-              &copy; 2024 NEXUS PRIME OMEGA AI AGENT Team. All rights reserved.<br>
-              Privacy First. Intelligence Driven.
-            </p>
-          </div>
-        `
-      });
-    } catch (err) {
-      console.error('Welcome email failed:', err);
-    }
+        subject: 'Welcome to NEXUS PRIME OMEGA AI AGENT!',
+        message: `Hello ${user.full_name}, welcome to the ecosystem.`,
+        html: `<div style="font-family: sans-serif; padding: 20px;">
+                <h1 style="color: #00d4ff;">⚡ NEXUS PRIME OMEGA</h1>
+                <p>Hello <strong>${user.full_name}</strong>, your account is ready.</p>
+                <a href="${process.env.FRONTEND_URL || 'http://localhost:3005'}/auth" style="display: inline-block; padding: 10px 20px; background: #00d4ff; color: #fff; text-decoration: none; border-radius: 5px;">Login Now</a>
+               </div>`
+    }).catch(console.error);
 
     res.status(201).json({
       token,
       refreshToken,
       user: {
-        id: user._id,
-        fullName: user.fullName,
+        id: user.id,
+        fullName: user.full_name,
         username: user.username,
         email: user.email,
         avatar: user.avatar,
-        role: user.role,
-        bio: user.bio,
-        location: user.location,
-        socialLinks: user.socialLinks,
-        preferences: user.preferences,
-        stats: user.stats,
-        createdAt: user.createdAt
+        role: user.role
       }
     });
   } catch (error) {
@@ -122,54 +90,34 @@ router.post('/login', [
     }
 
     const { login, password } = req.body;
-    const user = await User.findOne({
-      $or: [{ email: login.toLowerCase() }, { username: login.toLowerCase() }]
-    });
+    const user = await User.findOne({ email: login.toLowerCase() }) || await User.findOne({ username: login.toLowerCase() });
 
     if (!user) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    if (user.isLocked()) {
-      return res.status(423).json({ message: 'Account locked. Try again later.' });
-    }
-
-    const isMatch = await user.comparePassword(password);
+    const isMatch = await User.comparePassword(password, user.password);
     if (!isMatch) {
-      user.loginAttempts += 1;
-      if (user.loginAttempts >= 5) {
-        user.lockUntil = new Date(Date.now() + 15 * 60 * 1000);
-        user.loginAttempts = 0;
-      }
-      await user.save();
+      await sql`UPDATE users SET login_attempts = login_attempts + 1 WHERE id = ${user.id}`;
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    user.loginAttempts = 0;
-    user.lockUntil = undefined;
-    user.lastLoginAt = new Date();
-    await user.save();
+    await sql`UPDATE users SET login_attempts = 0, last_login_at = CURRENT_TIMESTAMP WHERE id = ${user.id}`;
 
-    const token = generateToken(user._id);
-    const refreshToken = generateRefreshToken(user._id);
+    const token = generateToken(user.id);
+    const refreshToken = generateRefreshToken(user.id);
 
     res.json({
       token,
       refreshToken,
       user: {
-        id: user._id,
-        fullName: user.fullName,
+        id: user.id,
+        fullName: user.full_name,
         username: user.username,
         email: user.email,
         avatar: user.avatar,
         role: user.role,
-        bio: user.bio,
-        location: user.location,
-        socialLinks: user.socialLinks,
-        preferences: user.preferences,
-        stats: user.stats,
-        createdAt: user.createdAt,
-        lastLoginAt: user.lastLoginAt
+        lastLoginAt: new Date()
       }
     });
   } catch (error) {
@@ -187,17 +135,14 @@ router.get('/me', protect, async (req, res) => {
 router.post('/refresh', async (req, res) => {
   try {
     const { refreshToken } = req.body;
-    if (!refreshToken) {
-      return res.status(401).json({ message: 'Refresh token required' });
-    }
+    if (!refreshToken) return res.status(401).json({ message: 'Refresh token required' });
+    
     const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
     const user = await User.findById(decoded.id);
-    if (!user) {
-      return res.status(401).json({ message: 'User not found' });
-    }
-    const newToken = generateToken(user._id);
-    const newRefreshToken = generateRefreshToken(user._id);
-    res.json({ token: newToken, refreshToken: newRefreshToken });
+    
+    if (!user) return res.status(401).json({ message: 'User not found' });
+    
+    res.json({ token: generateToken(user.id), refreshToken: generateRefreshToken(user.id) });
   } catch (error) {
     res.status(401).json({ message: 'Invalid refresh token' });
   }
@@ -206,32 +151,24 @@ router.post('/refresh', async (req, res) => {
 // PUT /api/auth/profile
 router.put('/profile', protect, async (req, res) => {
   try {
-    const { fullName, avatar, bio, location, socialLinks, preferences } = req.body;
-    const user = await User.findById(req.user._id);
-    if (fullName) user.fullName = fullName;
-    if (avatar) user.avatar = avatar;
-    if (bio) user.bio = bio;
-    if (location) user.location = location;
-    if (socialLinks) user.socialLinks = { ...user.socialLinks.toObject(), ...socialLinks };
-    if (preferences) user.preferences = { ...user.preferences.toObject(), ...preferences };
-    await user.save();
-    res.json({
-      user: {
-        id: user._id,
-        fullName: user.fullName,
-        username: user.username,
-        email: user.email,
-        avatar: user.avatar,
-        role: user.role,
-        bio: user.bio,
-        location: user.location,
-        socialLinks: user.socialLinks,
-        preferences: user.preferences,
-        stats: user.stats,
-        createdAt: user.createdAt
-      }
-    });
+    const { fullName, avatar, bio, location, preferences } = req.body;
+    
+    await sql`
+      UPDATE users 
+      SET full_name = COALESCE(${fullName}, full_name),
+          avatar = COALESCE(${avatar}, avatar),
+          bio = COALESCE(${bio}, bio),
+          location = COALESCE(${location}, location),
+          theme = COALESCE(${preferences?.theme}, theme),
+          language = COALESCE(${preferences?.language}, language),
+          agent_mode = COALESCE(${preferences?.agentMode}, agent_mode)
+      WHERE id = ${req.user.id};
+    `;
+    
+    const user = await User.findById(req.user.id);
+    res.json({ user });
   } catch (error) {
+    console.error('Profile update error:', error);
     res.status(500).json({ message: 'Error updating profile' });
   }
 });
@@ -242,45 +179,30 @@ router.post('/forgot-password', [
 ], async (req, res) => {
   try {
     const user = await User.findOne({ email: req.body.email });
-    if (!user) {
-      return res.status(404).json({ message: 'No user found with that email' });
-    }
+    if (!user) return res.status(404).json({ message: 'No user found' });
 
-    // Generate random reset token
     const resetToken = crypto.randomBytes(32).toString('hex');
-    user.resetPasswordToken = crypto.createHash('sha256').update(resetToken).digest('hex');
-    user.resetPasswordExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+    const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+    const expires = new Date(Date.now() + 10 * 60 * 1000);
 
-    await user.save({ validateBeforeSave: false });
+    await sql`UPDATE users SET reset_password_token = ${hashedToken}, reset_password_expires = ${expires} WHERE id = ${user.id}`;
 
-    // Send email
     const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3005'}/reset-password.html?token=${resetToken}`;
-    const message = `Forgot your password? Reset it here: ${resetUrl}\nIf you didn't request this, please ignore this email.`;
+    
+    await sendEmail({
+      email: user.email,
+      subject: 'NEXUS PRIME OMEGA — Password Reset Request',
+      message: `Reset your password here: ${resetUrl}`,
+      html: `<div style="font-family: sans-serif; padding: 20px;">
+              <h2>🔐 Password Reset Request</h2>
+              <p>Click below to reset your password. Valid for 10 minutes.</p>
+              <a href="${resetUrl}" style="padding: 12px 24px; background: #9d4edd; color: #fff; text-decoration: none; border-radius: 5px; font-weight: bold;">Reset Password</a>
+             </div>`
+    });
 
-    try {
-      await sendEmail({
-        email: user.email,
-        subject: 'NEXUS PRIME OMEGA — Password Reset Request (Valid for 10 min)',
-        message,
-        html: `
-          <div style="font-family: sans-serif; padding: 20px;">
-            <h2 style="color: #00f0ff;">🔐 Password Reset Request</h2>
-            <p>You requested a password reset for your NEXUS PRIME OMEGA AI AGENT account.</p>
-            <p>Click the button below to set a new password. This link is valid for <strong>10 minutes</strong>.</p>
-            <a href="${resetUrl}" style="display: inline-block; padding: 12px 24px; background: #9d4edd; color: #fff; text-decoration: none; border-radius: 5px; font-weight: bold;">Reset Password</a>
-            <p style="margin-top: 20px; font-size: 0.8rem; color: #999;">If you did not request this, please ignore this email.</p>
-          </div>
-        `
-      });
-
-      res.status(200).json({ status: 'success', message: 'Token sent to email!' });
-    } catch (err) {
-      user.resetPasswordToken = undefined;
-      user.resetPasswordExpires = undefined;
-      await user.save({ validateBeforeSave: false });
-      return res.status(500).json({ message: 'Error sending email. Try again later.' });
-    }
+    res.json({ status: 'success', message: 'Token sent to email!' });
   } catch (error) {
+    console.error('Forgot password error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -292,22 +214,27 @@ router.post('/reset-password/:token', [
   try {
     const hashedToken = crypto.createHash('sha256').update(req.params.token).digest('hex');
 
-    const user = await User.findOne({
-      resetPasswordToken: hashedToken,
-      resetPasswordExpires: { $gt: Date.now() }
-    });
+    const { rows } = await sql`
+      SELECT * FROM users 
+      WHERE reset_password_token = ${hashedToken} 
+      AND reset_password_expires > CURRENT_TIMESTAMP 
+      LIMIT 1;
+    `;
+    
+    if (rows.length === 0) return res.status(400).json({ message: 'Token is invalid or expired' });
 
-    if (!user) {
-      return res.status(400).json({ message: 'Token is invalid or has expired' });
-    }
+    const newPassword = await bcrypt.hash(req.body.password, 12);
+    await sql`
+      UPDATE users 
+      SET password = ${newPassword}, 
+          reset_password_token = NULL, 
+          reset_password_expires = NULL 
+      WHERE id = ${rows[0].id};
+    `;
 
-    user.password = req.body.password;
-    user.resetPasswordToken = undefined;
-    user.resetPasswordExpires = undefined;
-    await user.save();
-
-    res.status(200).json({ status: 'success', message: 'Password updated! Please login.' });
+    res.json({ status: 'success', message: 'Password updated! Please login.' });
   } catch (error) {
+    console.error('Reset password error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });

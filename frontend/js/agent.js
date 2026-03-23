@@ -4,7 +4,7 @@
 // ═══════════════════════════════════════════════
 
 document.addEventListener('DOMContentLoaded', () => {
-  const API = window.location.origin;
+  const API = 'https://nexus-prime-omega.onrender.com';
   let currentChatId = null;
   let currentUser = null;
   let uploadedFile = null;

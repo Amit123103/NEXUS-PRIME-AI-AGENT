@@ -65,10 +65,13 @@ router.post('/deep', protect, async (req, res) => {
     const report = data.choices?.[0]?.message?.content || "Research failed to summarize.";
 
     console.log('✅ Deep Research: Report generated successfully.');
-    // Simulate research cost/award
-    await User.findByIdAndUpdate(req.user._id, {
-      $inc: { 'stats.researchDone': 1, 'stats.researchPoints': 50 }
-    });
+    // SQL Update for stats
+    await sql`
+      UPDATE users 
+      SET research_done = research_done + 1, 
+          research_points = research_points + 50 
+      WHERE id = ${req.user.id};
+    `;
 
     res.json({
       success: true,

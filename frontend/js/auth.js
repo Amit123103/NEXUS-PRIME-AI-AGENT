@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════
 
 document.addEventListener('DOMContentLoaded', () => {
-  const API_URL = window.location.origin;
+  const API_URL = 'https://nexus-prime-omega.onrender.com';
 
   // ── Elements ────────────────────────────────
   const tabSignIn = document.getElementById('tabSignIn');

@@ -150,11 +150,10 @@ const callQwen = async (messages, mode = 'EXPERT') => {
 // GET /api/chats — list all chats for user
 router.get('/', protect, async (req, res) => {
   try {
-    const chats = await Chat.find({ userId: req.user._id, isArchived: false })
-      .sort({ updatedAt: -1 })
-      .select('title messages model mode createdAt updatedAt');
+    const chats = await Chat.find({ userId: req.user.id, isArchived: false });
     res.json({ chats });
   } catch (error) {
+    console.error('Fetch chats error:', error);
     res.status(500).json({ message: 'Error fetching chats' });
   }
 });
@@ -163,13 +162,16 @@ router.get('/', protect, async (req, res) => {
 router.post('/', protect, async (req, res) => {
   try {
     const chat = await Chat.create({
-      userId: req.user._id,
+      userId: req.user.id,
       title: req.body.title || 'New Chat',
+      model: req.body.model || 'qwen/qwen3.5-397b-a22b',
       mode: req.body.mode || 'EXPERT'
     });
-    await User.findByIdAndUpdate(req.user._id, { $inc: { 'stats.totalChats': 1 } });
+    // Increment stats via direct SQL
+    await sql`UPDATE users SET total_chats = total_chats + 1 WHERE id = ${req.user.id}`;
     res.status(201).json({ chat });
   } catch (error) {
+    console.error('Create chat error:', error);
     res.status(500).json({ message: 'Error creating chat' });
   }
 });
@@ -177,8 +179,10 @@ router.post('/', protect, async (req, res) => {
 // GET /api/chats/:id — get specific chat
 router.get('/:id', protect, async (req, res) => {
   try {
-    const chat = await Chat.findOne({ _id: req.params.id, userId: req.user._id });
-    if (!chat) return res.status(404).json({ message: 'Chat not found' });
+    const chat = await Chat.findById(req.params.id);
+    if (!chat || chat.user_id !== req.user.id) {
+      return res.status(404).json({ message: 'Chat not found' });
+    }
     res.json({ chat });
   } catch (error) {
     res.status(500).json({ message: 'Error fetching chat' });
@@ -188,13 +192,15 @@ router.get('/:id', protect, async (req, res) => {
 // PUT /api/chats/:id — update chat title
 router.put('/:id', protect, async (req, res) => {
   try {
-    const chat = await Chat.findOneAndUpdate(
-      { _id: req.params.id, userId: req.user._id },
-      { title: req.body.title },
-      { new: true }
-    );
-    if (!chat) return res.status(404).json({ message: 'Chat not found' });
-    res.json({ chat });
+    const { title } = req.body;
+    const { rows } = await sql`
+      UPDATE chats 
+      SET title = ${title}, updated_at = CURRENT_TIMESTAMP 
+      WHERE id = ${req.params.id} AND user_id = ${req.user.id}
+      RETURNING *;
+    `;
+    if (rows.length === 0) return res.status(404).json({ message: 'Chat not found' });
+    res.json({ chat: rows[0] });
   } catch (error) {
     res.status(500).json({ message: 'Error updating chat' });
   }
@@ -203,8 +209,7 @@ router.put('/:id', protect, async (req, res) => {
 // DELETE /api/chats/:id — delete chat
 router.delete('/:id', protect, async (req, res) => {
   try {
-    const chat = await Chat.findOneAndDelete({ _id: req.params.id, userId: req.user._id });
-    if (!chat) return res.status(404).json({ message: 'Chat not found' });
+    const chat = await Chat.findByIdAndDelete(req.params.id);
     res.json({ message: 'Chat deleted' });
   } catch (error) {
     res.status(500).json({ message: 'Error deleting chat' });
@@ -215,20 +220,25 @@ router.delete('/:id', protect, async (req, res) => {
 router.post('/:id/messages/stream', protect, async (req, res) => {
   try {
     const { content, type = 'text', imageUrl } = req.body;
-    if (!content || !content.trim()) {
-      return res.status(400).json({ message: 'Message content required' });
-    }
+    if (!content || !content.trim()) return res.status(400).json({ message: 'Message content required' });
 
-    const chat = await Chat.findOne({ _id: req.params.id, userId: req.user._id });
-    if (!chat) return res.status(404).json({ message: 'Chat not found' });
+    const chat = await Chat.findById(req.params.id);
+    if (!chat || chat.user_id !== req.user.id) return res.status(404).json({ message: 'Chat not found' });
 
-    // Add user message
-    const userMessage = { role: 'user', content: content.trim(), type: type || 'text', imageUrl, timestamp: new Date() };
-    chat.messages.push(userMessage);
+    // Add user message to SQL
+    const userMessage = await Message.create({
+      chatId: chat.id,
+      role: 'user',
+      content: content.trim(),
+      type: type || 'text',
+      imageUrl
+    });
 
-    // Auto-generate title
-    if (chat.messages.filter(m => m.role === 'user').length === 1) {
-      chat.title = content.trim().substring(0, 50) + (content.length > 50 ? '...' : '');
+    // Auto-generate title if first user message
+    if (chat.messages.filter(m => m.role === 'user').length === 0) {
+      const newTitle = content.trim().substring(0, 50) + (content.length > 50 ? '...' : '');
+      await sql`UPDATE chats SET title = ${newTitle} WHERE id = ${chat.id}`;
+      chat.title = newTitle;
     }
 
     const pKey = process.env.NVIDIA_PHI_API_KEY;
@@ -237,381 +247,152 @@ router.post('/:id/messages/stream', protect, async (req, res) => {
 
     if (!apiKey || apiKey.includes('your_nvidia')) {
       res.setHeader('Content-Type', 'text/event-stream');
-      res.setHeader('Cache-Control', 'no-cache');
-      res.setHeader('Connection', 'keep-alive');
-      res.write(`data: ${JSON.stringify({ token: 'API key not configured.', done: false })}\n\n`);
+      res.write(`data: ${JSON.stringify({ token: 'Intelligence Core Offline: API key not configured.', done: false })}\n\n`);
       res.write(`data: ${JSON.stringify({ done: true, chatTitle: chat.title })}\n\n`);
       return res.end();
     }
 
-    // Build conversation history and check for images using Nemotron OCR
-    const conversationHistory = [];
-    for (const m of chat.messages.slice(-20)) {
-      let msgContent = m.content;
-      
-      if (m.imageUrl && m.role === 'user') {
-        try {
-          const match = m.imageUrl.match(/^\/uploads\/(.+)$/);
-          if (match) {
-            const filePath = require('path').join(__dirname, '..', 'uploads', match[1]);
-            const base64 = require('fs').readFileSync(filePath, 'base64');
-            let ext = require('path').extname(match[1]).substring(1) || 'jpeg';
-            ext = ext.toLowerCase() === 'jpg' ? 'jpeg' : ext.toLowerCase();
-            
-            const ocrResult = await analyzeImageWithNemotron(base64, ext, apiKey);
-            msgContent = m.content + `\n\n[OCR Data Extracted from Image:\n${ocrResult}\n]\nPlease analyze or answer based on the extracted image data above.`;
-          }
-        } catch(e) {
-          console.error("Error reading image for OCR API:", e);
-        }
-      }
-      conversationHistory.push({ role: m.role, content: msgContent });
-    }
+    // Build history from SQL messages
+    const conversationHistory = chat.messages.slice(-20).map(m => ({ role: m.role, content: m.content }));
 
-    // Set SSE headers
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
-    res.setHeader('X-Accel-Buffering', 'no');
     res.flushHeaders();
 
-    // Call NVIDIA API with streaming
     const apiResponse = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-        'Accept': 'text/event-stream'
-      },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}`, 'Accept': 'text/event-stream' },
       body: JSON.stringify({
         model: 'microsoft/phi-3-mini-128k-instruct',
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT + `\n\nCurrent Mode: ${chat.mode || 'EXPERT'} | Intelligence Level: ${req.body.intelLevel || 'NORMAL'}` },
-          ...conversationHistory
-        ],
-        temperature: 0.60,
+        messages: [{ role: 'system', content: SYSTEM_PROMPT + `\n\nMode: ${chat.mode}` }, ...conversationHistory],
+        temperature: 0.6,
         max_tokens: 4096,
-        top_p: 0.95,
         stream: true
       })
     });
 
-    if (!apiResponse.ok) {
-      const err = await apiResponse.json().catch(() => ({}));
-      const errMsg = err.error?.message || err.detail || `API error ${apiResponse.status}`;
-      res.write(`data: ${JSON.stringify({ token: `Error: ${errMsg}`, done: false })}\n\n`);
-      res.write(`data: ${JSON.stringify({ done: true, chatTitle: chat.title })}\n\n`);
-      return res.end();
-    }
+    if (!apiResponse.ok) throw new Error(`NVIDIA API Error: ${apiResponse.status}`);
 
     let fullResponse = '';
     const reader = apiResponse.body.getReader();
     const decoder = new TextDecoder();
-    let buffer = '';
-
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop() || '';
-
+      const lines = decoder.decode(value).split('\n');
       for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed || !trimmed.startsWith('data: ')) continue;
-        const dataStr = trimmed.slice(6);
-        if (dataStr === '[DONE]') continue;
-
-        try {
-          const parsed = JSON.parse(dataStr);
-          const token = parsed.choices?.[0]?.delta?.content || '';
-          if (token) {
+        if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+          try {
+            const token = JSON.parse(line.slice(6)).choices[0].delta.content || '';
             fullResponse += token;
             res.write(`data: ${JSON.stringify({ token, done: false })}\n\n`);
-          }
-        } catch (e) {
-          // skip unparseable chunks
+          } catch (e) {}
         }
       }
     }
 
-    // Save to DB
-    const assistantMessage = { role: 'assistant', content: fullResponse.trim(), type: 'text', timestamp: new Date() };
-    chat.messages.push(assistantMessage);
-    await chat.save();
+    // Save Assistant response to SQL
+    await Message.create({ chatId: chat.id, role: 'assistant', content: fullResponse.trim() });
+    
+    // Update user stats (Atomic increment)
+    await sql`UPDATE users SET total_messages = total_messages + 2 WHERE id = ${req.user.id}`;
 
-    // Increment user totalMessages
-    await User.findByIdAndUpdate(req.user._id, { $inc: { 'stats.totalMessages': 2 } }); // User + Assistant
-
-    // Send final done event
     res.write(`data: ${JSON.stringify({ done: true, chatTitle: chat.title })}\n\n`);
     res.end();
-
   } catch (error) {
     console.error('Stream error:', error);
-    try {
-      res.write(`data: ${JSON.stringify({ token: `\nError: ${error.message}`, done: false })}\n\n`);
-      res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
-      res.end();
-    } catch (e) {
-      res.end();
-    }
+    res.write(`data: ${JSON.stringify({ token: `\nError: ${error.message}`, done: true })}\n\n`);
+    res.end();
   }
 });
 
-// POST /api/chats/incognito/stream — Incognito stream (Zero persistence)
+// POST /api/chats/incognito/stream — Zero persistence stream
 router.post('/incognito/stream', protect, async (req, res) => {
   try {
     const { content, mode = 'EXPERT' } = req.body;
-    if (!content || !content.trim()) {
-      return res.status(400).json({ message: 'Message content required' });
-    }
-
     const pKey = process.env.NVIDIA_PHI_API_KEY;
-    const bKey = process.env.NVIDIA_API_KEY;
-    const apiKey = (pKey && !pKey.includes('your_nvidia')) ? pKey : bKey;
+    const apiKey = (pKey && !pKey.includes('your_nvidia')) ? pKey : process.env.NVIDIA_API_KEY;
 
     res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-    res.setHeader('X-Accel-Buffering', 'no');
     res.flushHeaders();
-
-    if (!apiKey || apiKey.includes('your_nvidia')) {
-      res.write(`data: ${JSON.stringify({ token: 'API key not configured.', done: false })}\n\n`);
-      res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
-      return res.end();
-    }
 
     const apiResponse = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-        'Accept': 'text/event-stream'
-      },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}`, 'Accept': 'text/event-stream' },
       body: JSON.stringify({
         model: 'microsoft/phi-3-mini-128k-instruct',
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT + `\n\n[INCOGNITO MODE ACTIVE: Do not reference past sessions. Current Mode: ${mode} | Intelligence Level: ${req.body.intelLevel || 'NORMAL'}]` },
-          { role: 'user', content: content.trim() }
-        ],
-        temperature: 0.60,
-        max_tokens: 4096,
-        top_p: 0.95,
+        messages: [{ role: 'system', content: SYSTEM_PROMPT + `\n\n[INCOGNITO MODE ACTIVE]` }, { role: 'user', content }],
         stream: true
       })
     });
 
-    if (!apiResponse.ok) {
-      const err = await apiResponse.json().catch(() => ({}));
-      const errMsg = err.error?.message || err.detail || `API error ${apiResponse.status}`;
-      res.write(`data: ${JSON.stringify({ token: `Error: ${errMsg}`, done: false })}\n\n`);
-      res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
-      return res.end();
-    }
-
     const reader = apiResponse.body.getReader();
     const decoder = new TextDecoder();
-    let buffer = '';
-
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop() || '';
-
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed || !trimmed.startsWith('data: ')) continue;
-        const dataStr = trimmed.slice(6);
-        if (dataStr === '[DONE]') continue;
-
+      const tokens = decoder.decode(value).split('\n').filter(l => l.startsWith('data: '));
+      for (const l of tokens) {
         try {
-          const parsed = JSON.parse(dataStr);
-          const token = parsed.choices?.[0]?.delta?.content || '';
-          if (token) {
-            res.write(`data: ${JSON.stringify({ token, done: false })}\n\n`);
-          }
-        } catch (e) { }
+          const t = JSON.parse(l.slice(6)).choices[0].delta.content;
+          if (t) res.write(`data: ${JSON.stringify({ token: t, done: false })}\n\n`);
+        } catch (e) {}
       }
     }
-
     res.write(`data: ${JSON.stringify({ done: true, incognito: true })}\n\n`);
     res.end();
-
   } catch (error) {
-    console.error('Incognito stream error:', error);
-    try {
-      res.write(`data: ${JSON.stringify({ token: `\nError: ${error.message}`, done: false })}\n\n`);
-      res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
-      res.end();
-    } catch (e) { res.end(); }
+    res.end();
   }
 });
 
-// POST /api/chats/quick/stream — STREAMING quick message (creates chat)
+// POST /api/chats/quick/stream — Creates chat + stream
 router.post('/quick/stream', protect, async (req, res) => {
   try {
-    const { content, mode = 'EXPERT', type = 'text', imageUrl } = req.body;
-    if (!content || !content.trim()) {
-      return res.status(400).json({ message: 'Message content required' });
-    }
+    const { content, mode = 'EXPERT' } = req.body;
+    const chat = await Chat.create({ userId: req.user.id, title: content.substring(0, 50), mode });
+    await sql`UPDATE users SET total_chats = total_chats + 1 WHERE id = ${req.user.id}`;
+    
+    // Save User message
+    await Message.create({ chatId: chat.id, role: 'user', content });
 
-    // Create new chat
-    const chat = await Chat.create({
-      userId: req.user._id,
-      title: content.trim().substring(0, 50) + (content.length > 50 ? '...' : ''),
-      mode
-    });
-    await User.findByIdAndUpdate(req.user._id, { $inc: { 'stats.totalChats': 1 } });
-
-    const userMessage = { role: 'user', content: content.trim(), type: type || 'text', imageUrl, timestamp: new Date() };
-    chat.messages.push(userMessage);
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.write(`data: ${JSON.stringify({ chatId: chat.id, chatTitle: chat.title })}\n\n`);
 
     const pKey = process.env.NVIDIA_PHI_API_KEY;
-    const bKey = process.env.NVIDIA_API_KEY;
-    const apiKey = (pKey && !pKey.includes('your_nvidia')) ? pKey : bKey;
-
-    // Set SSE headers
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-    res.setHeader('X-Accel-Buffering', 'no');
-    res.flushHeaders();
-
-    // Send chat ID first
-    res.write(`data: ${JSON.stringify({ chatId: chat._id, chatTitle: chat.title })}\n\n`);
-
-    if (!apiKey || apiKey.includes('your_nvidia')) {
-      res.write(`data: ${JSON.stringify({ token: 'API key not configured.', done: false })}\n\n`);
-      res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
-      return res.end();
-    }
-
-    let msgContent = content.trim();
-
-    // If image attached, use Nemotron OCR and inject data
-    if (imageUrl) {
-      try {
-        const match = imageUrl.match(/^\/uploads\/(.+)$/);
-        if (match) {
-          const filePath = require('path').join(__dirname, '..', 'uploads', match[1]);
-          const base64 = require('fs').readFileSync(filePath, 'base64');
-          let ext = require('path').extname(match[1]).substring(1) || 'jpeg';
-          ext = ext.toLowerCase() === 'jpg' ? 'jpeg' : ext.toLowerCase();
-          
-          const ocrResult = await analyzeImageWithNemotron(base64, ext, apiKey);
-          msgContent = content.trim() + `\n\n[OCR Data Extracted from Image:\n${ocrResult}\n]\nPlease analyze or answer based on the extracted image data above.`;
-        }
-      } catch(e) {
-        console.error("Error reading image for OCR API:", e);
-      }
-    }
+    const apiKey = (pKey && !pKey.includes('your_nvidia')) ? pKey : process.env.NVIDIA_API_KEY;
 
     const apiResponse = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-        'Accept': 'text/event-stream'
-      },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}`, 'Accept': 'text/event-stream' },
       body: JSON.stringify({
         model: 'microsoft/phi-3-mini-128k-instruct',
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT + `\n\nCurrent Mode: ${mode} | Intelligence Level: ${req.body.intelLevel || 'NORMAL'}` },
-          { role: 'user', content: msgContent }
-        ],
-        temperature: 0.60,
-        max_tokens: 4096,
-        top_p: 0.95,
+        messages: [{ role: 'system', content: SYSTEM_PROMPT }, { role: 'user', content }],
         stream: true
       })
     });
 
-    if (!apiResponse.ok) {
-      const err = await apiResponse.json().catch(() => ({}));
-      const errMsg = err.error?.message || err.detail || `API error ${apiResponse.status}`;
-      res.write(`data: ${JSON.stringify({ token: `Error: ${errMsg}`, done: false })}\n\n`);
-      res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
-      return res.end();
-    }
-
-    let fullResponse = '';
+    let fullResp = '';
     const reader = apiResponse.body.getReader();
     const decoder = new TextDecoder();
-    let buffer = '';
-
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop() || '';
-
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed || !trimmed.startsWith('data: ')) continue;
-        const dataStr = trimmed.slice(6);
-        if (dataStr === '[DONE]') continue;
-
+      const lines = decoder.decode(value).split('\n').filter(l => l.startsWith('data: '));
+      for (const l of lines) {
         try {
-          const parsed = JSON.parse(dataStr);
-          const token = parsed.choices?.[0]?.delta?.content || '';
-          if (token) {
-            fullResponse += token;
-            res.write(`data: ${JSON.stringify({ token, done: false })}\n\n`);
-          }
-        } catch (e) { }
+          const t = JSON.parse(l.slice(6)).choices[0].delta.content;
+          if (t) { fullResp += t; res.write(`data: ${JSON.stringify({ token: t, done: false })}\n\n`); }
+        } catch (e) {}
       }
     }
 
-    // Save to DB
-    const assistantMessage = { role: 'assistant', content: fullResponse.trim(), type: 'text', timestamp: new Date() };
-    chat.messages.push(assistantMessage);
-    await chat.save();
-
+    await Message.create({ chatId: chat.id, role: 'assistant', content: fullResp.trim() });
     res.write(`data: ${JSON.stringify({ done: true, chatTitle: chat.title })}\n\n`);
     res.end();
-
   } catch (error) {
-    console.error('Quick stream error:', error);
-    try {
-      res.write(`data: ${JSON.stringify({ token: `\nError: ${error.message}`, done: false })}\n\n`);
-      res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
-      res.end();
-    } catch (e) { res.end(); }
-  }
-});
-
-// Keep old non-streaming endpoints as fallbacks
-// POST /api/chats/:id/messages
-router.post('/:id/messages', protect, async (req, res) => {
-  try {
-    const { content, type = 'text' } = req.body;
-    if (!content || !content.trim()) {
-      return res.status(400).json({ message: 'Message content required' });
-    }
-    const chat = await Chat.findOne({ _id: req.params.id, userId: req.user._id });
-    if (!chat) return res.status(404).json({ message: 'Chat not found' });
-    const userMessage = { role: 'user', content: content.trim(), type, timestamp: new Date() };
-    chat.messages.push(userMessage);
-    if (chat.messages.filter(m => m.role === 'user').length === 1) {
-      chat.title = content.trim().substring(0, 50) + (content.length > 50 ? '...' : '');
-    }
-    const conversationHistory = chat.messages.slice(-20).map(m => ({ role: m.role, content: m.content }));
-    const aiResponse = await callQwen(conversationHistory, chat.mode);
-    const assistantMessage = { role: 'assistant', content: aiResponse, type: 'text', timestamp: new Date() };
-    chat.messages.push(assistantMessage);
-    await chat.save();
-    res.json({ userMessage, assistantMessage, chatTitle: chat.title });
-  } catch (error) {
-    console.error('Message error:', error);
-    res.status(500).json({ message: 'Error processing message' });
+    res.end();
   }
 });
 
@@ -646,15 +427,19 @@ router.get('/search/query', protect, async (req, res) => {
   try {
     const { q } = req.query;
     if (!q) return res.json({ chats: [] });
-    const chats = await Chat.find({
-      userId: req.user._id,
-      $or: [
-        { title: { $regex: q, $options: 'i' } },
-        { 'messages.content': { $regex: q, $options: 'i' } }
-      ]
-    }).sort({ updatedAt: -1 }).select('title createdAt updatedAt');
-    res.json({ chats });
+    
+    // Search in both titles and message content using SQL ILIKE
+    const { rows } = await sql`
+      SELECT DISTINCT c.id, c.title, c.created_at, c.updated_at 
+      FROM chats c
+      LEFT JOIN messages m ON c.id = m.chat_id
+      WHERE c.user_id = ${req.user.id}
+      AND (c.title ILIKE ${'%' + q + '%'} OR m.content ILIKE ${'%' + q + '%'})
+      ORDER BY c.updated_at DESC;
+    `;
+    res.json({ chats: rows });
   } catch (error) {
+    console.error('Search error:', error);
     res.status(500).json({ message: 'Error searching chats' });
   }
 });

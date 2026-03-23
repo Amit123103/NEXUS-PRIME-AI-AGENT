@@ -1,53 +1,61 @@
-const mongoose = require('mongoose');
+const { sql } = require('@vercel/postgres');
 
-const messageSchema = new mongoose.Schema({
-  role: {
-    type: String,
-    enum: ['user', 'assistant'],
-    required: true
+const Chat = {
+  // Find all chats for a user
+  find: async (query) => {
+    const { rows } = await sql`
+      SELECT * FROM chats 
+      WHERE user_id = ${query.userId} 
+      AND is_archived = ${query.isArchived || false}
+      ORDER BY updated_at DESC;
+    `;
+    return rows;
   },
-  content: {
-    type: String,
-    required: true
+
+  // Find chat by ID with messages
+  findById: async (id) => {
+    const chatResult = await sql`SELECT * FROM chats WHERE id = ${id} LIMIT 1;`;
+    if (chatResult.rows.length === 0) return null;
+    
+    const chat = chatResult.rows[0];
+    const messageResult = await sql`
+      SELECT * FROM messages 
+      WHERE chat_id = ${id} 
+      ORDER BY created_at ASC;
+    `;
+    
+    return { ...chat, messages: messageResult.rows };
   },
-  type: {
-    type: String,
-    enum: ['text', 'image', 'file', 'research', 'quiz', 'video'],
-    default: 'text'
+
+  // Create new chat
+  create: async ({ userId, title, model, mode }) => {
+    const { rows } = await sql`
+      INSERT INTO chats (user_id, title, model, mode)
+      VALUES (${userId}, ${title}, ${model}, ${mode})
+      RETURNING *;
+    `;
+    return rows[0];
   },
-  fileUrl: String,
-  imageUrl: String,
-  timestamp: {
-    type: Date,
-    default: Date.now
+
+  // Delete chat
+  findByIdAndDelete: async (id) => {
+    await sql`DELETE FROM chats WHERE id = ${id};`;
+    return { id };
   }
-});
+};
 
-const chatSchema = new mongoose.Schema({
-  userId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-  title: {
-    type: String,
-    default: 'New Chat'
-  },
-  messages: [messageSchema],
-  model: {
-    type: String,
-    default: 'qwen/qwen3.5-397b-a22b'
-  },
-  mode: {
-    type: String,
-    default: 'EXPERT'
-  },
-  isArchived: {
-    type: Boolean,
-    default: false
+const Message = {
+  // Create message
+  create: async ({ chatId, role, content, type, fileUrl, imageUrl }) => {
+    const { rows } = await sql`
+      INSERT INTO messages (chat_id, role, content, type, file_url, image_url)
+      VALUES (${chatId}, ${role}, ${content}, ${type}, ${fileUrl}, ${imageUrl})
+      RETURNING *;
+    `;
+    // Update chat timestamp
+    await sql`UPDATE chats SET updated_at = CURRENT_TIMESTAMP WHERE id = ${chatId};`;
+    return rows[0];
   }
-}, {
-  timestamps: true
-});
+};
 
-module.exports = mongoose.model('Chat', chatSchema);
+module.exports = { Chat, Message };

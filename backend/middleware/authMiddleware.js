@@ -14,15 +14,21 @@ const protect = async (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.id).select('-password');
+    const user = await User.findById(decoded.id);
 
     if (!user) {
       return res.status(401).json({ message: 'User not found' });
     }
 
-    if (!user.isActive) {
+    if (!user.is_active) {
       return res.status(401).json({ message: 'Account deactivated' });
     }
+
+    // Remove sensitive data
+    delete user.password;
+    
+    // Compatibility: mapping full_name to fullName for frontend
+    user.fullName = user.full_name;
 
     req.user = user;
     next();
