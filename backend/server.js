@@ -48,8 +48,11 @@ const authLimiter = rateLimit({
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
 
-// Initialize Database (MongoDB Atlas)
-connectDB();
+// Initialize Database (MongoDB Atlas) in background to prevent startup blocks
+connectDB().catch(err => {
+  console.error('⚠️ Critical Database Error during background connect:', err.message);
+  // We don't exit here immediately so the server can still respond with 503/500 to health checks
+});
 
 // Body parsers
 app.use(express.json({ limit: '10mb' }));
